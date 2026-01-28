@@ -22,3 +22,9 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# Cloudflare Wrangler (Local DB data & caches)
+.wrangler/
+
+# Drizzle local sqlite file
+*.sqlite
