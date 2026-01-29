@@ -4,7 +4,7 @@
   "compatibility_date": "2025-02-04",
   "pages_build_output_dir": "./dist",
   "observability": {
-    "enabled": true,
+    "enabled": true
   },
 
   // ▼▼▼ デフォルト設定 (開発時は無視されるか、mainブランチで使われる) ▼▼▼
@@ -12,33 +12,35 @@
     {
       "binding": "DB",
       "database_name": "mono-db-prod",
-      "database_id": "62cb0c52-7b3e-402c-8a7b-5d0cadfb41e8",
-    },
+      "database_id": "62cb0c52-7b3e-402c-8a7b-5d0cadfb41e8"
+    }
   ],
 
   // ▼▼▼ 環境ごとの設定 ▼▼▼
   "env": {
     // ポートフォリオ用 (Demo)
-    // 使う時: wrangler ... --env demo
-    "demo": {
+    "preview": {
       "d1_databases": [
         {
           "binding": "DB",
           "database_name": "mono-db-demo",
-          "database_id": "bdb38f8d-488d-4d08-aeb5-6d08cba3d148",
-        },
-      ],
+          "database_id": "bdb38f8d-488d-4d08-aeb5-6d08cba3d148"
+        }
+      ]
     },
     // 自分たち用 (Production)
-    // 使う時: wrangler ... --env production
     "production": {
       "d1_databases": [
         {
           "binding": "DB",
           "database_name": "mono-db-prod",
-          "database_id": "62cb0c52-7b3e-402c-8a7b-5d0cadfb41e8",
-        },
-      ],
-    },
+          "database_id": "62cb0c52-7b3e-402c-8a7b-5d0cadfb41e8"
+        }
+      ]
+    }
   },
+
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
 }
