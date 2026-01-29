@@ -19,6 +19,7 @@ export const createAuth = (env: any) => {
         verification: schema.verification,
       },
     }),
+    baseURL: env.BETTER_AUTH_URL,
     socialProviders: {
       google: {
         clientId: env.GOOGLE_CLIENT_ID,
