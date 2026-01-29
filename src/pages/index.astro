@@ -1,17 +1,53 @@
 ---
 // src/pages/index.astro
 
+import { App } from '@/components/App';
+import { SignIn } from '@/components/SignIn';
+import { Settings } from '@/components/Settings';
 import Layout from '@/layouts/Layout.astro';
-import { ShoppingList } from '@/components/ShoppingList';
+import { createAuth } from '@/lib/auth';
+
+// 1. 環境変数の取得（Astro + Cloudflare）
+const env = Astro.locals.runtime.env;
+
+// 2. セッションチェック
+const auth = createAuth(env);
+const session = await auth.api.getSession({
+  headers: Astro.request.headers,
+});
+
+const user = session?.user;
 ---
 
 <Layout title="MONO">
-  <main class="container mx-auto max-w-md px-4 py-8">
-    <header class="mb-8 text-center">
-      <h1 class="text-4xl font-bold tracking-tighter">MONO</h1>
-      <p class="text-muted-foreground text-sm">Zero friction, Zero loading.</p>
-    </header>
+  <main>
+    {
+      !user ? (
+        <SignIn client:load />
+      ) : (
+        <div class="p-4">
+          <div class="mb-4 flex items-center justify-between">
+            <h1 class="text-xl font-bold">買い物リスト</h1>
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
+                {user.image && (
+                  <img
+                    src={user.image}
+                    alt={user.name}
+                    class="h-8 w-8 rounded-full border border-gray-200"
+                  />
+                )}
+                {/* 名前はスマホだと邪魔になるので隠してもいいかも */}
+                <span class="hidden text-sm font-medium text-gray-700 sm:block">{user.name}</span>
+              </div>
 
-    <ShoppingList client:load />
+              <Settings client:load />
+            </div>
+          </div>
+
+          <App client:load />
+        </div>
+      )
+    }
   </main>
 </Layout>
