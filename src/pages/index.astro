@@ -3,49 +3,69 @@
 
 import { App } from '@/components/App';
 import { SignIn } from '@/components/SignIn';
-import { Settings } from '@/components/Settings';
+import { Settings } from '@/components/ui/Settings';
 import Layout from '@/layouts/Layout.astro';
 import { createAuth } from '@/lib/auth';
+import { drizzle } from 'drizzle-orm/d1';
+import { eq } from 'drizzle-orm';
+import type { User } from '@/db/schema';
+import { user as userTable } from '@/db/schema';
 
-// 1. 環境変数の取得（Astro + Cloudflare）
 const env = Astro.locals.runtime.env;
-
-// 2. セッションチェック
 const auth = createAuth(env);
 const session = await auth.api.getSession({
   headers: Astro.request.headers,
 });
 
-const user = session?.user;
+let dbUser: User | null = null;
+let memberCount = 1;
+
+if (session?.user) {
+  const db = drizzle(env.DB);
+
+  const fetchedUser = await db
+    .select()
+    .from(userTable)
+    .where(eq(userTable.id, session.user.id))
+    .get();
+
+  if (fetchedUser) {
+    dbUser = fetchedUser;
+
+    if (dbUser.activeFamilyId) {
+      const members = await db
+        .select()
+        .from(userTable)
+        .where(eq(userTable.activeFamilyId, dbUser.activeFamilyId))
+        .all();
+      memberCount = members.length;
+    }
+  }
+}
 ---
 
 <Layout title="MONO">
-  <main>
+  <main class="min-h-screen bg-gray-50 pb-20">
     {
-      !user ? (
+      !dbUser ? (
         <SignIn client:load />
       ) : (
-        <div class="p-4">
-          <div class="mb-4 flex items-center justify-between">
-            <h1 class="text-xl font-bold">買い物リスト</h1>
+        <div class="mx-auto max-w-md">
+          <header class="flex items-center justify-between bg-white px-6 py-4 shadow-sm">
+            <h1 class="font-mono text-xl font-bold tracking-tight">MONO</h1>
             <div class="flex items-center gap-3">
-              <div class="flex items-center gap-2">
-                {user.image && (
-                  <img
-                    src={user.image}
-                    alt={user.name}
-                    class="h-8 w-8 rounded-full border border-gray-200"
-                  />
-                )}
-                {/* 名前はスマホだと邪魔になるので隠してもいいかも */}
-                <span class="hidden text-sm font-medium text-gray-700 sm:block">{user.name}</span>
-              </div>
-
               <Settings client:load />
+              {dbUser.image && (
+                <img
+                  src={dbUser.image}
+                  alt={dbUser.name}
+                  class="h-8 w-8 rounded-full border border-gray-100"
+                />
+              )}
             </div>
-          </div>
+          </header>
 
-          <App client:load />
+          <App client:load userId={dbUser.id} memberCount={memberCount} />
         </div>
       )
     }

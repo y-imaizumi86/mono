@@ -3,60 +3,92 @@
 import type { APIRoute } from 'astro';
 import { createAuth } from '@/lib/auth';
 import { drizzle } from 'drizzle-orm/d1';
-import { items, user } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { items as ItemsTable, user as UserTable, updateItemSchema } from '@/db/schema';
+import { eq, and, or } from 'drizzle-orm';
 
-// 削除 (DELETE)
-export const DELETE: APIRoute = async (context) => {
-  const env = context.locals.runtime.env;
-  const auth = createAuth(env);
-  const session = await auth.api.getSession({ headers: context.request.headers });
+export const PATCH: APIRoute = async ({ request, params, locals }) => {
+  const auth = createAuth(locals.runtime.env);
+  const session = await auth.api.getSession({ headers: request.headers });
 
   if (!session) return new Response('Unauthorized', { status: 401 });
 
-  const id = Number(context.params.id);
-  const db = drizzle(env.DB);
+  const itemId = params.id;
+  if (!itemId) return new Response('ID Required', { status: 400 });
 
-  // 実行者の家族IDを取得
-  const dbUser = await db.select().from(user).where(eq(user.id, session.user.id)).get();
+  const body = await request.json();
+  const parseResult = updateItemSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return new Response(JSON.stringify(parseResult.error), { status: 400 });
+  }
+
+  const db = drizzle(locals.runtime.env.DB);
+  const updates = parseResult.data;
+
+  const dbUser = await db.select().from(UserTable).where(eq(UserTable.id, session.user.id)).get();
   if (!dbUser?.activeFamilyId) return new Response('Forbidden', { status: 403 });
 
-  await db.delete(items).where(
-    and(
-      eq(items.id, id),
-      eq(items.familyId, dbUser.activeFamilyId)
-    )
-  );
+  if (updates.type) {
+    const targetItem = await db
+      .select()
+      .from(ItemsTable)
+      .where(eq(ItemsTable.id, itemId))
+      .get();
 
-  return new Response(null, { status: 204 });
-};
+    if (!targetItem) return new Response('Item not found', { status: 404 });
 
-// 更新 (PATCH) - 完了状態の切り替えなど
-export const PATCH: APIRoute = async (context) => {
-  const env = context.locals.runtime.env;
-  const auth = createAuth(env);
-  const session = await auth.api.getSession({ headers: context.request.headers });
+    if (targetItem.createdById !== session.user.id) {
+      return new Response('Only the creator can change visibility', { status: 403 });
+    }
+  }
 
-  if (!session) return new Response('Unauthorized', { status: 401 });
-
-  const id = Number(context.params.id);
-  const body = (await context.request.json()) as { isCompleted: boolean };
-  const db = drizzle(env.DB);
-
-  const dbUser = await db.select().from(user).where(eq(user.id, session.user.id)).get();
-  if (!dbUser?.activeFamilyId) return new Response('Forbidden', { status: 403 });
-
-  // 家族チェックを通して更新
   const updated = await db
-    .update(items)
-    .set({ isCompleted: body.isCompleted })
+    .update(ItemsTable)
+    .set(parseResult.data)
     .where(
       and(
-        eq(items.id, id),
-        eq(items.familyId, dbUser.activeFamilyId)
+        eq(ItemsTable.id, itemId),
+        eq(ItemsTable.familyId, dbUser.activeFamilyId),
+        or(eq(ItemsTable.type, 'family'), eq(ItemsTable.createdById, dbUser.id))
       )
     )
     .returning();
 
+  if (updated.length === 0) {
+    return new Response('Item not found or access denied', { status: 404 });
+  }
+
   return new Response(JSON.stringify(updated[0]));
+};
+
+export const DELETE: APIRoute = async ({ request, params, locals }) => {
+  const auth = createAuth(locals.runtime.env);
+  const session = await auth.api.getSession({ headers: request.headers });
+
+  if (!session) return new Response('Unauthorized', { status: 401 });
+
+  const itemId = params.id;
+  if (!itemId) return new Response('ID Required', { status: 400 });
+
+  const db = drizzle(locals.runtime.env.DB);
+
+  const dbUser = await db.select().from(UserTable).where(eq(UserTable.id, session.user.id)).get();
+  if (!dbUser?.activeFamilyId) return new Response('Forbidden', { status: 403 });
+
+  const deleted = await db
+    .delete(ItemsTable)
+    .where(
+      and(
+        eq(ItemsTable.id, itemId),
+        eq(ItemsTable.familyId, dbUser.activeFamilyId),
+        or(eq(ItemsTable.type, 'family'), eq(ItemsTable.createdById, dbUser.id))
+      )
+    )
+    .returning();
+
+  if (deleted.length === 0) {
+    return new Response('Item not found or access denied', { status: 404 });
+  }
+
+  return new Response(null, { status: 204 });
 };

@@ -1,165 +1,104 @@
-import { useState, useEffect } from 'react';
+// src/components/App.tsx
 
-// 型定義（APIから返ってくるデータと同じ形）
-interface Item {
-  id: number;
-  label: string;
-  isCompleted: boolean;
+import { useState, useMemo } from 'react';
+import { Reorder } from 'framer-motion';
+import { useItems } from '@/hooks/useItems';
+import { TabSwitcher } from './ui/TabSwitcher';
+import { ShoppingItem } from './ui/ShoppingItem';
+import { Plus } from 'lucide-react';
+import type { Item } from '@/db/schema';
+import { mutate } from 'swr';
+
+interface Props {
+  userId: string;
+  memberCount: number;
 }
 
-export const App = () => {
-  const [items, setItems] = useState<Item[]>([]);
-  const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+export const App = ({ userId, memberCount }: Props) => {
+  const { items, isLoading, addItem, updateItem, deleteItem } = useItems();
+  const [activeTab, setActiveTab] = useState<'family' | 'private'>('family');
+  const [inputText, setInputText] = useState('');
 
-  // 1. 初回ロード時にリストを取得 (GET)
-  useEffect(() => {
-    fetchItems();
-  }, []);
+  const isSolo = memberCount <= 1;
 
-  const fetchItems = async () => {
-    try {
-      const res = await fetch('/api/items');
-      if (res.ok) {
-        const data = await res.json() as Item[];
-        setItems(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch items', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const filteredItems = useMemo(() => {
+    if (isSolo) return items;
+    return items.filter((item) => {
+      if (activeTab === 'family') return item.type === 'family';
+      return item.type === 'private';
+    });
+  }, [items, activeTab, isSolo]);
 
-  // 2. アイテム追加 (POST)
-  const addItem = async (e: React.FormEvent) => {
+  const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (!inputText.trim()) return;
 
-    const res = await fetch('/api/items', {
-      method: 'POST',
-      body: JSON.stringify({ label: inputValue }),
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const type = isSolo ? 'family' : activeTab;
+    addItem(inputText, type);
 
-    if (res.ok) {
-      const newItem = await res.json() as Item;
-      setItems((prev) => [newItem, ...prev]);
-      setInputValue('');
-    }
+    setInputText('');
   };
 
-  // 3. 完了状態の切り替え (PATCH)
-  const toggleItem = async (id: number, currentStatus: boolean) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, isCompleted: !currentStatus } : item))
-    );
-
-    await fetch(`/api/items/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ isCompleted: !currentStatus }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-  };
-
-  // 4. 削除 (DELETE)
-  const deleteItem = async (id: number) => {
-    // 見た目から消す
-    setItems((prev) => prev.filter((item) => item.id !== id));
-
-    await fetch(`/api/items/${id}`, {
-      method: 'DELETE',
-    });
+  const handleReorder = (newOrder: Item[]) => {
+    mutate('/api/items', newOrder, false);
   };
 
   if (isLoading) {
-    return <div className="p-8 text-center text-gray-500">読み込み中...</div>;
+    return (
+      <div className="flex h-60 animate-pulse items-center justify-center text-gray-400">
+        読み込み中...
+      </div>
+    );
   }
 
   return (
-    <div className="mx-auto w-full max-w-md overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-      {/* 入力エリア */}
-      <form onSubmit={addItem} className="border-b border-gray-100 bg-gray-50 p-4">
-        <div className="flex gap-2">
+    <div className="mt-4 pb-24">
+      {!isSolo && <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />}
+
+      {filteredItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400 opacity-50">
+          <div className="mb-2 text-4xl">🛒</div>
+          <p className="text-sm font-medium">リストは空です</p>
+        </div>
+      ) : (
+        <Reorder.Group axis="y" values={filteredItems} onReorder={handleReorder}>
+          {filteredItems.map((item) => (
+            <ShoppingItem
+              key={item.id}
+              item={item}
+              currentUserId={userId}
+              onUpdate={updateItem}
+              onDelete={deleteItem}
+            />
+          ))}
+        </Reorder.Group>
+      )}
+
+      <form
+        onSubmit={handleAdd}
+        className="safe-area-bottom fixed right-0 bottom-0 left-0 z-50 border-t border-gray-100 bg-white/80 p-4 backdrop-blur-md"
+      >
+        <div className="mx-auto flex max-w-md gap-2">
           <input
             type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="牛乳を買う..."
-            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 transition-all focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder={
+              isSolo
+                ? '買うものを入力...'
+                : `${activeTab === 'family' ? 'みんな' : '自分'}のリストに追加...`
+            }
+            className="flex-1 rounded-full bg-gray-100 px-5 py-3 text-gray-800 shadow-inner transition-all placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-black/5 focus:outline-none"
           />
           <button
             type="submit"
-            disabled={!inputValue.trim()}
-            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!inputText.trim()}
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-black text-white shadow-lg transition-transform active:scale-90 disabled:opacity-50 disabled:active:scale-100"
           >
-            追加
+            <Plus size={24} />
           </button>
         </div>
       </form>
-
-      {/* リストエリア */}
-      <ul className="max-h-[60vh] divide-y divide-gray-100 overflow-y-auto">
-        {items.length === 0 ? (
-          <li className="p-8 text-center text-sm text-gray-400">まだアイテムがありません</li>
-        ) : (
-          items.map((item) => (
-            <li
-              key={item.id}
-              className={`group flex items-center justify-between p-4 transition-colors hover:bg-gray-50 ${
-                item.isCompleted ? 'bg-gray-50/50' : ''
-              }`}
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <button
-                  onClick={() => toggleItem(item.id, item.isCompleted)}
-                  className={`flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border transition-colors ${
-                    item.isCompleted
-                      ? 'border-blue-500 bg-blue-500 text-white'
-                      : 'border-gray-300 hover:border-blue-400'
-                  }`}
-                >
-                  {item.isCompleted && (
-                    <svg
-                      className="h-3.5 w-3.5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </button>
-                <span
-                  className={`cursor-pointer truncate transition-all select-none ${
-                    item.isCompleted ? 'text-gray-400 line-through' : 'text-gray-700'
-                  }`}
-                  onClick={() => toggleItem(item.id, item.isCompleted)}
-                >
-                  {item.label}
-                </span>
-              </div>
-
-              <button
-                onClick={() => deleteItem(item.id)}
-                className="p-2 text-gray-400 opacity-0 transition-all group-hover:opacity-100 hover:text-red-500"
-                aria-label="削除"
-              >
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                </svg>
-              </button>
-            </li>
-          ))
-        )}
-      </ul>
     </div>
   );
 };

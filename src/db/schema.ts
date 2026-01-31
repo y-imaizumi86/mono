@@ -1,6 +1,9 @@
 // src/db/schema.ts
 
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { createInsertSchema } from 'drizzle-zod';
+import { z } from 'zod';
+import { type InferSelectModel } from 'drizzle-orm';
 
 export const family = sqliteTable('family', {
   id: text('id').primaryKey(),
@@ -15,8 +18,7 @@ export const user = sqliteTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: integer('email_verified', { mode: 'boolean' }).notNull(),
   image: text('image'),
-  activeFamilyId: text('active_family_id')
-    .references(() => family.id),
+  activeFamilyId: text('active_family_id').references(() => family.id),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
@@ -65,18 +67,43 @@ export const verification = sqliteTable('verification', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }),
 });
 
-// 買い物アイテムテーブル
 export const items = sqliteTable('items', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  label: text('label').notNull(),
+  id: text('id').primaryKey(),
+  text: text('text').notNull(),
+  type: text('type').notNull().default('family'),
+  order: integer('order').notNull().default(0),
   isCompleted: integer('is_completed', { mode: 'boolean' }).notNull().default(false),
   familyId: text('family_id')
     .notNull()
-    .references(() => family.id),
+    .references(() => family.id, { onDelete: 'cascade' }),
   createdById: text('created_by_id')
     .notNull()
-    .references(() => user.id),
+    .references(() => user.id, { onDelete: 'cascade' }),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
 });
+
+export const insertItemSchema = createInsertSchema(items)
+  .omit({
+    id: true,
+    familyId: true,
+    createdById: true,
+    createdAt: true,
+    isCompleted: true,
+  })
+  .extend({
+    text: z.string().min(1, '買い物の内容は必須です').max(100, '買い物の内容が長すぎます'),
+  });
+
+export const updateItemSchema = createInsertSchema(items)
+  .pick({
+    text: true,
+    isCompleted: true,
+    type: true,
+    order: true,
+  })
+  .partial();
+
+export type User = InferSelectModel<typeof user>;
+export type Item = InferSelectModel<typeof items>;
