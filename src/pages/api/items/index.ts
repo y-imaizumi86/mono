@@ -3,27 +3,25 @@
 import type { APIRoute } from 'astro';
 import { createAuth } from '@/lib/auth';
 import { drizzle } from 'drizzle-orm/d1';
-import { family, items, user } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import {
+  items as ItemsTable,
+  family as FamilyTable,
+  user as UserTable,
+  insertItemSchema,
+} from '@/db/schema';
+import { eq, desc, and, or, asc } from 'drizzle-orm';
 
-// 取得 (GET)
-export const GET: APIRoute = async (context) => {
-  const env = context.locals.runtime.env;
-  const auth = createAuth(env);
-
-  // 1. ログインチェック
-  const session = await auth.api.getSession({
-    headers: context.request.headers,
-  });
+export const GET: APIRoute = async ({ request, locals }) => {
+  const auth = createAuth(locals.runtime.env);
+  const session = await auth.api.getSession({ headers: request.headers });
 
   if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    return new Response('Unauthorized', { status: 401 });
   }
 
-  const db = drizzle(env.DB);
+  const db = drizzle(locals.runtime.env.DB);
 
-  // 2. 最新のユーザー情報をDBから取得
-  const dbUser = await db.select().from(user).where(eq(user.id, session.user.id)).get();
+  const dbUser = await db.select().from(UserTable).where(eq(UserTable.id, session.user.id)).get();
 
   if (!dbUser) {
     return new Response('User not found', { status: 404 });
@@ -32,73 +30,69 @@ export const GET: APIRoute = async (context) => {
   let currentFamilyId = dbUser.activeFamilyId;
 
   if (!currentFamilyId) {
-    // 1. 新しい家族を作成
-    const newFamily = await db
-      .insert(family)
-      .values({
-        id: crypto.randomUUID(),
-        name: `${dbUser.name}家`,
-        inviteCode: crypto.randomUUID().slice(0, 6).toUpperCase(),
-        createdAt: new Date(),
-      })
-      .returning()
-      .get();
+    const newFamilyId = crypto.randomUUID();
 
-    // 2. ユーザーをその家族に所属させる
-    await db.update(user).set({ activeFamilyId: newFamily.id }).where(eq(user.id, dbUser.id));
+    await db.insert(FamilyTable).values({
+      id: newFamilyId,
+      name: `${dbUser.name}家`,
+      inviteCode: crypto.randomUUID().slice(0, 6).toUpperCase(),
+      createdAt: new Date(),
+    });
 
-    currentFamilyId = newFamily.id;
+    await db
+      .update(UserTable)
+      .set({ activeFamilyId: newFamilyId })
+      .where(eq(UserTable.id, dbUser.id));
+
+    currentFamilyId = newFamilyId;
   }
 
-  // 3. 「自分の家族」のアイテムを取得
-  const familyItems = await db
+  const result = await db
     .select()
-    .from(items)
-    .where(eq(items.familyId, currentFamilyId))
-    .orderBy(desc(items.createdAt));
+    .from(ItemsTable)
+    .where(
+      and(
+        eq(ItemsTable.familyId, currentFamilyId),
+        or(eq(ItemsTable.type, 'family'), eq(ItemsTable.createdById, dbUser.id))
+      )
+    )
+    .orderBy(asc(ItemsTable.order), desc(ItemsTable.createdAt));
 
-  return new Response(JSON.stringify(familyItems), {
+  return new Response(JSON.stringify(result), {
     headers: { 'Content-Type': 'application/json' },
   });
 };
 
-// 追加 (POST)
-export const POST: APIRoute = async (context) => {
-  const env = context.locals.runtime.env;
-  const auth = createAuth(env);
-
-  // 1. ログインチェック
-  const session = await auth.api.getSession({
-    headers: context.request.headers,
-  });
+export const POST: APIRoute = async ({ request, locals }) => {
+  const auth = createAuth(locals.runtime.env);
+  const session = await auth.api.getSession({ headers: request.headers });
 
   if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    return new Response('Unauthorized', { status: 401 });
   }
 
-  // 2. リクエストボディからデータを取り出す
-  const body = (await context.request.json()) as { label: string };
-  const label = body.label;
+  const body = await request.json();
+  const parseResult = insertItemSchema.safeParse(body);
 
-  if (!label) {
-    return new Response('Label is required', { status: 400 });
+  if (!parseResult.success) {
+    return new Response(JSON.stringify(parseResult.error), { status: 400 });
   }
 
-  // 3. DBに保存（自分のIDを紐付ける）
-  const db = drizzle(env.DB);
+  const db = drizzle(locals.runtime.env.DB);
 
-  const dbUser = await db.select().from(user).where(eq(user.id, session.user.id)).get();
+  const dbUser = await db.select().from(UserTable).where(eq(UserTable.id, session.user.id)).get();
 
-  if (!dbUser?.activeFamilyId) {
+  if (!dbUser || !dbUser.activeFamilyId) {
     return new Response('Family not found', { status: 400 });
   }
 
   const newItem = await db
-    .insert(items)
+    .insert(ItemsTable)
     .values({
-      label,
+      ...parseResult.data,
+      id: crypto.randomUUID(),
       familyId: dbUser.activeFamilyId,
-      createdById: session.user.id,
+      createdById: dbUser.id,
     })
     .returning();
 

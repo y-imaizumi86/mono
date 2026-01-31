@@ -23,14 +23,16 @@ CREATE TABLE `family` (
 );
 --> statement-breakpoint
 CREATE TABLE `items` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`label` text NOT NULL,
+	`id` text PRIMARY KEY NOT NULL,
+	`text` text NOT NULL,
+	`type` text DEFAULT 'family' NOT NULL,
+	`order` integer DEFAULT 0 NOT NULL,
 	`is_completed` integer DEFAULT false NOT NULL,
 	`family_id` text NOT NULL,
 	`created_by_id` text NOT NULL,
 	`created_at` integer NOT NULL,
-	FOREIGN KEY (`family_id`) REFERENCES `family`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`created_by_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`family_id`) REFERENCES `family`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`created_by_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `session` (
