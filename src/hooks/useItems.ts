@@ -62,6 +62,26 @@ export const useItems = () => {
     mutate('/api/items');
   };
 
+  const reorderItems = async (sortedItems: Item[]) => {
+    mutate('/api/items', sortedItems, false);
+
+    const updates = sortedItems.map((item, index) => ({
+      id: item.id,
+      order: index,
+    }));
+
+    try {
+      await fetch('/api/items/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates }),
+      });
+    } catch (e) {
+      console.error('Reorder failed', e);
+      mutate('/api/items');
+    }
+  };
+
   return {
     items,
     isLoading,
@@ -69,5 +89,6 @@ export const useItems = () => {
     addItem,
     updateItem,
     deleteItem,
+    reorderItems,
   };
 };
