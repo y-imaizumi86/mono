@@ -1,6 +1,12 @@
 // src/components/ui/ShoppingItem.tsx
 
-import { Reorder, motion, useAnimate, useDragControls, useMotionValue } from 'framer-motion';
+import {
+  Reorder,
+  animate,
+  motion,
+  useDragControls,
+  useMotionValue,
+} from 'framer-motion';
 import { GripVertical, Trash2, Lock, Unlock, Check } from 'lucide-react';
 import { useState } from 'react';
 import type { Item } from '@/db/schema';
@@ -11,15 +17,17 @@ interface Props {
   currentUserId: string;
   onUpdate: (id: string, updates: Partial<Item>) => void;
   onDelete: (id: string) => void;
+  onOrderChange: () => void;
 }
 
-export const ShoppingItem = ({ item, currentUserId, onUpdate, onDelete }: Props) => {
+export const ShoppingItem = ({ item, currentUserId, onUpdate, onDelete, onOrderChange }: Props) => {
   const dragControls = useDragControls();
 
   const y = useMotionValue(0);
   const boxShadow = useRaisedShadow(y);
 
-  const [scope, animate] = useAnimate();
+  const x = useMotionValue(0);
+
   const [isOpen, setIsOpen] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
 
@@ -33,20 +41,16 @@ export const ShoppingItem = ({ item, currentUserId, onUpdate, onDelete }: Props)
     const velocity = info.velocity.x;
 
     if (offset < -50 || velocity < -500) {
-      await animate(
-        scope.current,
-        { x: -buttonWidth },
-        { type: 'spring', bounce: 0, duration: 0.3 }
-      );
+      await animate(x, -buttonWidth, { type: 'spring', bounce: 0, duration: 0.3 });
       setIsOpen(true);
     } else {
-      await animate(scope.current, { x: 0 }, { type: 'spring', bounce: 0, duration: 0.3 });
+      await animate(x, 0, { type: 'spring', bounce: 0, duration: 0.3 });
       setIsOpen(false);
     }
   };
 
   const closeSwipe = () => {
-    animate(scope.current, { x: 0 });
+    animate(x, 0, { type: 'spring', bounce: 0, duration: 0.3 });
     setIsOpen(false);
   };
 
@@ -56,8 +60,11 @@ export const ShoppingItem = ({ item, currentUserId, onUpdate, onDelete }: Props)
       id={item.id}
       dragListener={false}
       dragControls={dragControls}
-      onDragEnd={() => setIsReordering(false)}
-      transition={{ type: 'spring', stiffness: 600, damping: 50 }}
+      onDragEnd={() => {
+        setIsReordering(false);
+        onOrderChange();
+      }}
+      transition={{ type: 'tween', duration: 0.15, ease: 'easeOut' }}
       style={{ boxShadow, y, position: 'relative' }}
       className="mb-3 touch-pan-y rounded-xl select-none"
     >
@@ -84,7 +91,6 @@ export const ShoppingItem = ({ item, currentUserId, onUpdate, onDelete }: Props)
       </div>
 
       <motion.div
-        ref={scope}
         drag={isReordering ? false : 'x'}
         dragConstraints={{ left: -buttonWidth, right: 0 }}
         dragElastic={{ right: 0.05 }}
@@ -95,9 +101,10 @@ export const ShoppingItem = ({ item, currentUserId, onUpdate, onDelete }: Props)
             closeSwipe();
           }
         }}
+        style={{ x }}
         className="relative z-10 flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
       >
-        <div className="flex flex-1 items-center gap-3 overflow-hidden">
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
@@ -131,8 +138,12 @@ export const ShoppingItem = ({ item, currentUserId, onUpdate, onDelete }: Props)
         </div>
 
         <div
-          className="cursor-grab touch-none p-2 text-gray-300 hover:text-gray-500 active:cursor-grabbing"
+          className={`cursor-grab touch-none p-2 text-gray-300 transition-opacity duration-200 hover:text-gray-500 active:cursor-grabbing ${
+            isOpen ? 'pointer-events-none opacity-0' : 'opacity-100'
+          }`}
           onPointerDown={(e) => {
+            if (isOpen) return;
+
             setIsReordering(true);
             dragControls.start(e);
           }}

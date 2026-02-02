@@ -23,7 +23,7 @@ export const useRaisedShadow = (value: MotionValue<number>) => {
         isActive = false;
         if (isActive !== wasActive) {
           // 静止時（置いた時）の影
-          animate(boxShadow, INACTIVE_SHADOW, { duration: 0.1 });
+          animate(boxShadow, INACTIVE_SHADOW, { duration: 0.05 });
         }
       }
     });

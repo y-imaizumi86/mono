@@ -15,7 +15,7 @@ interface Props {
 }
 
 export const App = ({ userId, memberCount }: Props) => {
-  const { items, isLoading, addItem, updateItem, deleteItem } = useItems();
+  const { items, isLoading, addItem, updateItem, deleteItem, reorderItems } = useItems();
   const [activeTab, setActiveTab] = useState<'family' | 'private'>('family');
   const [inputText, setInputText] = useState('');
 
@@ -39,8 +39,16 @@ export const App = ({ userId, memberCount }: Props) => {
     setInputText('');
   };
 
-  const handleReorder = (newOrder: Item[]) => {
-    mutate('/api/items', newOrder, false);
+  const handleReorder = (newFilteredOrder: Item[]) => {
+    const currentAllItems = [...items];
+    const newOrderIds = new Set(newFilteredOrder.map((i) => i.id));
+    const hiddenItems = currentAllItems.filter((i) => !newOrderIds.has(i.id));
+    const mergedItems = [...newFilteredOrder, ...hiddenItems];
+    mutate('/api/items', mergedItems, false);
+  };
+
+  const handleOrderSave = () => {
+    reorderItems(items);
   };
 
   if (isLoading) {
@@ -69,6 +77,7 @@ export const App = ({ userId, memberCount }: Props) => {
               currentUserId={userId}
               onUpdate={updateItem}
               onDelete={deleteItem}
+              onOrderChange={handleOrderSave}
             />
           ))}
         </Reorder.Group>
