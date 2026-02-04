@@ -5,6 +5,7 @@ import { Reorder } from 'framer-motion';
 import { useItems } from '@/hooks/useItems';
 import { TabSwitcher } from './ui/TabSwitcher';
 import { ShoppingItem } from './ui/ShoppingItem';
+import { PullToRefresh } from './ui/PullToRefresh';
 import { Plus } from 'lucide-react';
 import type { Item } from '@/db/schema';
 import { mutate } from 'swr';
@@ -18,6 +19,13 @@ export const App = ({ userId, memberCount }: Props) => {
   const { items, isLoading, addItem, updateItem, deleteItem, reorderItems } = useItems();
   const [activeTab, setActiveTab] = useState<'family' | 'private'>('family');
   const [inputText, setInputText] = useState('');
+
+  const handleRefresh = async () => {
+    // データの再検証
+    await mutate('/api/items');
+    // スピナーを表示するための最小待機時間（UXのため、任意）
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  };
 
   const isSolo = memberCount <= 1;
 
@@ -60,32 +68,41 @@ export const App = ({ userId, memberCount }: Props) => {
   }
 
   return (
-    <div className="mt-4 pb-24">
-      {!isSolo && <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />}
-
-      {filteredItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400 opacity-50">
-          <div className="mb-2 text-4xl">🛒</div>
-          <p className="text-sm font-medium">リストは空です</p>
+    <div className="flex h-full flex-col overflow-hidden pt-[68px]">
+      {!isSolo && (
+        <div className="flex-none px-4 pt-4 pb-2">
+          <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
-      ) : (
-        <Reorder.Group axis="y" values={filteredItems} onReorder={handleReorder}>
-          {filteredItems.map((item) => (
-            <ShoppingItem
-              key={item.id}
-              item={item}
-              currentUserId={userId}
-              onUpdate={updateItem}
-              onDelete={deleteItem}
-              onOrderChange={handleOrderSave}
-            />
-          ))}
-        </Reorder.Group>
       )}
+
+      {/* スクロール可能なコンテナ */}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
+        <PullToRefresh onRefresh={handleRefresh} className="min-h-full">
+          {filteredItems.length === 0 ? (
+            <div className="flex h-60 flex-col items-center justify-center text-gray-400 opacity-50">
+              <div className="mb-2 text-4xl">🛒</div>
+              <p className="text-sm font-medium">リストは空です</p>
+            </div>
+          ) : (
+            <Reorder.Group axis="y" values={filteredItems} onReorder={handleReorder} layoutScroll>
+              {filteredItems.map((item) => (
+                <ShoppingItem
+                  key={item.id}
+                  item={item}
+                  currentUserId={userId}
+                  onUpdate={updateItem}
+                  onDelete={deleteItem}
+                  onOrderChange={handleOrderSave}
+                />
+              ))}
+            </Reorder.Group>
+          )}
+        </PullToRefresh>
+      </div>
 
       <form
         onSubmit={handleAdd}
-        className="safe-area-bottom fixed right-0 bottom-0 left-0 z-50 border-t border-gray-100 bg-white/80 p-4 backdrop-blur-md"
+        className="safe-area-bottom flex-none border-t border-gray-100 bg-white/80 p-4 backdrop-blur-md"
       >
         <div className="mx-auto flex max-w-md gap-2">
           <input

@@ -45,29 +45,31 @@ if (session?.user) {
 ---
 
 <Layout title="MONO">
-  <main class="min-h-screen bg-gray-50 pb-20">
-    {
-      !dbUser ? (
-        <SignIn client:load />
-      ) : (
-        <div class="mx-auto max-w-md">
-          <header class="flex items-center justify-between bg-white px-6 py-4 shadow-sm">
-            <h1 class="font-mono text-xl font-bold tracking-tight">MONO</h1>
-            <div class="flex items-center gap-3">
-              <Settings client:load />
-              {dbUser.image && (
-                <img
-                  src={dbUser.image}
-                  alt={dbUser.name}
-                  class="h-8 w-8 rounded-full border border-gray-100"
-                />
-              )}
-            </div>
-          </header>
+  {
+    !dbUser ? (
+      <SignIn client:load />
+    ) : (
+      <div class="relative h-dvh w-full overflow-hidden bg-gray-50">
+        {/* ヘッダー: 絶対配置 (Top), グラスモーフィズム効果 */}
+        <header class="absolute top-0 right-0 left-0 z-30 flex items-center justify-between bg-white/80 px-6 py-4 shadow-sm backdrop-blur-md">
+          <h1 class="font-mono text-xl font-bold tracking-tight">MONO</h1>
+          <div class="flex items-center gap-3">
+            <Settings client:load />
+            {dbUser.image && (
+              <img
+                src={dbUser.image}
+                alt={dbUser.name}
+                class="h-8 w-8 rounded-full border border-gray-100"
+              />
+            )}
+          </div>
+        </header>
 
+        {/* メイン: フルスクリーン, コンテンツは App コンポーネントで管理 */}
+        <main class="absolute inset-0 z-0 h-full w-full">
           <App client:load userId={dbUser.id} memberCount={memberCount} />
-        </div>
-      )
-    }
-  </main>
+        </main>
+      </div>
+    )
+  }
 </Layout>
