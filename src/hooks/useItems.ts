@@ -1,3 +1,5 @@
+// src/hooks/useItems.ts
+
 import type { Item } from '@/db/schema';
 import useSWR, { mutate } from 'swr';
 
@@ -8,17 +10,16 @@ export const useItems = () => {
 
   const items = data || [];
 
-  const addItem = async (text: string, type: 'family' | 'private' = 'family') => {
+  const addItem = async (text: string, listType: 'shared' | 'private' = 'shared') => {
     const tempId = crypto.randomUUID();
 
-    const tempItem = {
+    const tempItem: Item = {
       id: tempId,
       text,
       isCompleted: false,
-      type,
+      listType,
+      ownerEmail: 'temp',
       order: 0,
-      familyId: 'temp',
-      createdById: 'temp',
       createdAt: new Date(),
     };
 
@@ -28,7 +29,7 @@ export const useItems = () => {
       await fetch('/api/items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, type }),
+        body: JSON.stringify({ text, listType }),
       });
 
       mutate('/api/items');
@@ -52,7 +53,7 @@ export const useItems = () => {
   };
 
   const deleteItem = async (id: string) => {
-    const newItems = items.filter((item: any) => item.id !== id);
+    const newItems = items.filter((item) => item.id !== id);
     mutate('/api/items', newItems, false);
 
     await fetch(`/api/items/${id}`, {

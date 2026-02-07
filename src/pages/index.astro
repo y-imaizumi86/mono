@@ -2,74 +2,23 @@
 // src/pages/index.astro
 
 import { App } from '@/components/App';
-import { SignIn } from '@/components/SignIn';
-import { Settings } from '@/components/ui/Settings';
 import Layout from '@/layouts/Layout.astro';
-import { createAuth } from '@/lib/auth';
-import { drizzle } from 'drizzle-orm/d1';
-import { eq } from 'drizzle-orm';
-import type { User } from '@/db/schema';
-import { user as userTable } from '@/db/schema';
 
-const env = Astro.locals.runtime.env;
-const auth = createAuth(env);
-const session = await auth.api.getSession({
-  headers: Astro.request.headers,
-});
-
-let dbUser: User | null = null;
-let memberCount = 1;
-
-if (session?.user) {
-  const db = drizzle(env.DB);
-
-  const fetchedUser = await db
-    .select()
-    .from(userTable)
-    .where(eq(userTable.id, session.user.id))
-    .get();
-
-  if (fetchedUser) {
-    dbUser = fetchedUser;
-
-    if (dbUser.activeFamilyId) {
-      const members = await db
-        .select()
-        .from(userTable)
-        .where(eq(userTable.activeFamilyId, dbUser.activeFamilyId))
-        .all();
-      memberCount = members.length;
-    }
-  }
-}
+const userEmail = Astro.locals.userEmail;
 ---
 
 <Layout title="MONO">
-  {
-    !dbUser ? (
-      <SignIn client:load />
-    ) : (
-      <div class="relative h-dvh w-full overflow-hidden bg-gray-50">
-        {/* ヘッダー: 絶対配置 (Top), グラスモーフィズム効果 */}
-        <header class="absolute top-0 right-0 left-0 z-30 flex items-center justify-between bg-white/80 px-6 py-4 shadow-sm backdrop-blur-md">
-          <h1 class="font-mono text-xl font-bold tracking-tight">MONO</h1>
-          <div class="flex items-center gap-3">
-            <Settings client:load />
-            {dbUser.image && (
-              <img
-                src={dbUser.image}
-                alt={dbUser.name}
-                class="h-8 w-8 rounded-full border border-gray-100"
-              />
-            )}
-          </div>
-        </header>
+  <div class="relative h-dvh w-full overflow-hidden bg-gray-50">
+    {/* ヘッダー: 絶対配置 (Top), グラスモーフィズム効果 */}
+    <header
+      class="absolute top-0 right-0 left-0 z-30 flex items-center justify-center bg-white/80 px-6 py-4 shadow-sm backdrop-blur-md"
+    >
+      <h1 class="font-mono text-xl font-bold tracking-tight">MONO</h1>
+    </header>
 
-        {/* メイン: フルスクリーン, コンテンツは App コンポーネントで管理 */}
-        <main class="absolute inset-0 z-0 h-full w-full">
-          <App client:load userId={dbUser.id} memberCount={memberCount} />
-        </main>
-      </div>
-    )
-  }
+    {/* メイン: フルスクリーン, コンテンツは App コンポーネントで管理 */}
+    <main class="absolute inset-0 z-0 h-full w-full">
+      <App client:load userEmail={userEmail || ''} />
+    </main>
+  </div>
 </Layout>

@@ -1,0 +1,9 @@
+name = "mono"
+compatibility_date = "2025-02-04"
+pages_build_output_dir = "./dist"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mono-db-prod"
+database_id = "62cb0c52-7b3e-402c-8a7b-5d0cadfb41e8"
