@@ -1,16 +1,13 @@
 // src/pages/api/items/[id].ts
 
 import type { APIRoute } from 'astro';
-import { createAuth } from '@/lib/auth';
 import { drizzle } from 'drizzle-orm/d1';
-import { items as ItemsTable, user as UserTable, updateItemSchema } from '@/db/schema';
+import { items as ItemsTable, updateItemSchema } from '@/db/schema';
 import { eq, and, or } from 'drizzle-orm';
 
 export const PATCH: APIRoute = async ({ request, params, locals }) => {
-  const auth = createAuth(locals.runtime.env);
-  const session = await auth.api.getSession({ headers: request.headers });
-
-  if (!session) return new Response('Unauthorized', { status: 401 });
+  const userEmail = locals.userEmail;
+  if (!userEmail) return new Response('Unauthorized', { status: 401 });
 
   const itemId = params.id;
   if (!itemId) return new Response('ID Required', { status: 400 });
@@ -23,33 +20,26 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
   }
 
   const db = drizzle(locals.runtime.env.DB);
-  const updates = parseResult.data;
 
-  const dbUser = await db.select().from(UserTable).where(eq(UserTable.id, session.user.id)).get();
-  if (!dbUser?.activeFamilyId) return new Response('Forbidden', { status: 403 });
-
-  if (updates.type) {
-    const targetItem = await db
-      .select()
-      .from(ItemsTable)
-      .where(eq(ItemsTable.id, itemId))
-      .get();
+  // listType の変更は作成者のみ許可
+  if (parseResult.data.listType) {
+    const targetItem = await db.select().from(ItemsTable).where(eq(ItemsTable.id, itemId)).get();
 
     if (!targetItem) return new Response('Item not found', { status: 404 });
 
-    if (targetItem.createdById !== session.user.id) {
+    if (targetItem.ownerEmail !== userEmail) {
       return new Response('Only the creator can change visibility', { status: 403 });
     }
   }
 
+  // shared アイテムは誰でも更新可、private は作成者のみ更新可
   const updated = await db
     .update(ItemsTable)
     .set(parseResult.data)
     .where(
       and(
         eq(ItemsTable.id, itemId),
-        eq(ItemsTable.familyId, dbUser.activeFamilyId),
-        or(eq(ItemsTable.type, 'family'), eq(ItemsTable.createdById, dbUser.id))
+        or(eq(ItemsTable.listType, 'shared'), eq(ItemsTable.ownerEmail, userEmail))
       )
     )
     .returning();
@@ -61,27 +51,22 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
   return new Response(JSON.stringify(updated[0]));
 };
 
-export const DELETE: APIRoute = async ({ request, params, locals }) => {
-  const auth = createAuth(locals.runtime.env);
-  const session = await auth.api.getSession({ headers: request.headers });
-
-  if (!session) return new Response('Unauthorized', { status: 401 });
+export const DELETE: APIRoute = async ({ params, locals }) => {
+  const userEmail = locals.userEmail;
+  if (!userEmail) return new Response('Unauthorized', { status: 401 });
 
   const itemId = params.id;
   if (!itemId) return new Response('ID Required', { status: 400 });
 
   const db = drizzle(locals.runtime.env.DB);
 
-  const dbUser = await db.select().from(UserTable).where(eq(UserTable.id, session.user.id)).get();
-  if (!dbUser?.activeFamilyId) return new Response('Forbidden', { status: 403 });
-
+  // shared アイテムは誰でも削除可、private は作成者のみ削除可
   const deleted = await db
     .delete(ItemsTable)
     .where(
       and(
         eq(ItemsTable.id, itemId),
-        eq(ItemsTable.familyId, dbUser.activeFamilyId),
-        or(eq(ItemsTable.type, 'family'), eq(ItemsTable.createdById, dbUser.id))
+        or(eq(ItemsTable.listType, 'shared'), eq(ItemsTable.ownerEmail, userEmail))
       )
     )
     .returning();

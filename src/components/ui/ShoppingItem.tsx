@@ -1,12 +1,6 @@
 // src/components/ui/ShoppingItem.tsx
 
-import {
-  Reorder,
-  animate,
-  motion,
-  useDragControls,
-  useMotionValue,
-} from 'framer-motion';
+import { Reorder, animate, motion, useDragControls, useMotionValue } from 'framer-motion';
 import { GripVertical, Trash2, Lock, Unlock, Check } from 'lucide-react';
 import { useState } from 'react';
 import type { Item } from '@/db/schema';
@@ -14,13 +8,19 @@ import { useRaisedShadow } from '@/hooks/useRaisedShadow';
 
 interface Props {
   item: Item;
-  currentUserId: string;
+  currentUserEmail: string;
   onUpdate: (id: string, updates: Partial<Item>) => void;
   onDelete: (id: string) => void;
   onOrderChange: () => void;
 }
 
-export const ShoppingItem = ({ item, currentUserId, onUpdate, onDelete, onOrderChange }: Props) => {
+export const ShoppingItem = ({
+  item,
+  currentUserEmail,
+  onUpdate,
+  onDelete,
+  onOrderChange,
+}: Props) => {
   const dragControls = useDragControls();
 
   const y = useMotionValue(0);
@@ -31,7 +31,7 @@ export const ShoppingItem = ({ item, currentUserId, onUpdate, onDelete, onOrderC
   const [isOpen, setIsOpen] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
 
-  const canChangeType = item.createdById === currentUserId;
+  const canChangeType = item.ownerEmail === currentUserEmail;
   const buttonWidth = canChangeType ? 120 : 60;
 
   const handleDragEnd = async (_: any, info: any) => {
@@ -73,12 +73,12 @@ export const ShoppingItem = ({ item, currentUserId, onUpdate, onDelete, onOrderC
           {canChangeType && (
             <button
               onClick={() => {
-                onUpdate(item.id, { type: item.type === 'family' ? 'private' : 'family' });
+                onUpdate(item.id, { listType: item.listType === 'shared' ? 'private' : 'shared' });
                 closeSwipe();
               }}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-400 text-white shadow-sm transition-transform active:scale-90"
             >
-              {item.type === 'family' ? <Lock size={18} /> : <Unlock size={18} />}
+              {item.listType === 'shared' ? <Lock size={18} /> : <Unlock size={18} />}
             </button>
           )}
           <button
@@ -129,7 +129,7 @@ export const ShoppingItem = ({ item, currentUserId, onUpdate, onDelete, onOrderC
             >
               {item.text}
             </span>
-            {item.type === 'private' && (
+            {item.listType === 'private' && (
               <span className="mt-0.5 flex items-center gap-1 text-[10px] text-gray-400">
                 <Lock size={10} /> 自分だけ
               </span>

@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { Reorder } from 'framer-motion';
 import { useItems } from '@/hooks/useItems';
-import { TabSwitcher } from './ui/TabSwitcher';
 import { ShoppingItem } from './ui/ShoppingItem';
 import { PullToRefresh } from './ui/PullToRefresh';
 import { Plus } from 'lucide-react';
@@ -11,39 +10,33 @@ import type { Item } from '@/db/schema';
 import { mutate } from 'swr';
 
 interface Props {
-  userId: string;
-  memberCount: number;
+  userEmail: string;
 }
 
-export const App = ({ userId, memberCount }: Props) => {
+export const App = ({ userEmail }: Props) => {
   const { items, isLoading, addItem, updateItem, deleteItem, reorderItems } = useItems();
-  const [activeTab, setActiveTab] = useState<'family' | 'private'>('family');
+  const [activeTab, setActiveTab] = useState<'shared' | 'private'>('shared');
   const [inputText, setInputText] = useState('');
 
   const handleRefresh = async () => {
-    // データの再検証
     await mutate('/api/items');
-    // スピナーを表示するための最小待機時間（UXのため、任意）
     await new Promise((resolve) => setTimeout(resolve, 500));
   };
 
-  const isSolo = memberCount <= 1;
+  // shared と private でアイテムを分類
+  const sharedItems = useMemo(() => items.filter((item) => item.listType === 'shared'), [items]);
+  const privateItems = useMemo(
+    () => items.filter((item) => item.listType === 'private' && item.ownerEmail === userEmail),
+    [items, userEmail]
+  );
 
-  const filteredItems = useMemo(() => {
-    if (isSolo) return items;
-    return items.filter((item) => {
-      if (activeTab === 'family') return item.type === 'family';
-      return item.type === 'private';
-    });
-  }, [items, activeTab, isSolo]);
+  const filteredItems = activeTab === 'shared' ? sharedItems : privateItems;
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
 
-    const type = isSolo ? 'family' : activeTab;
-    addItem(inputText, type);
-
+    addItem(inputText, activeTab);
     setInputText('');
   };
 
@@ -69,11 +62,27 @@ export const App = ({ userId, memberCount }: Props) => {
 
   return (
     <div className="flex h-full flex-col overflow-hidden pt-[68px]">
-      {!isSolo && (
-        <div className="flex-none px-4 pt-4 pb-2">
-          <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* タブ切り替え */}
+      <div className="flex-none px-4 pt-4 pb-2">
+        <div className="flex gap-2 rounded-full bg-gray-100 p-1">
+          <button
+            onClick={() => setActiveTab('shared')}
+            className={`flex-1 rounded-full py-2 text-sm font-medium transition-all ${
+              activeTab === 'shared' ? 'bg-white shadow-sm' : 'text-gray-500'
+            }`}
+          >
+            みんな ({sharedItems.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('private')}
+            className={`flex-1 rounded-full py-2 text-sm font-medium transition-all ${
+              activeTab === 'private' ? 'bg-white shadow-sm' : 'text-gray-500'
+            }`}
+          >
+            自分だけ ({privateItems.length})
+          </button>
         </div>
-      )}
+      </div>
 
       {/* スクロール可能なコンテナ */}
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
@@ -89,7 +98,7 @@ export const App = ({ userId, memberCount }: Props) => {
                 <ShoppingItem
                   key={item.id}
                   item={item}
-                  currentUserId={userId}
+                  currentUserEmail={userEmail}
                   onUpdate={updateItem}
                   onDelete={deleteItem}
                   onOrderChange={handleOrderSave}
@@ -109,11 +118,7 @@ export const App = ({ userId, memberCount }: Props) => {
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder={
-              isSolo
-                ? '買うものを入力...'
-                : `${activeTab === 'family' ? 'みんな' : '自分'}のリストに追加...`
-            }
+            placeholder={`${activeTab === 'shared' ? 'みんな' : '自分だけ'}のリストに追加...`}
             className="flex-1 rounded-full bg-gray-100 px-5 py-3 text-gray-800 shadow-inner transition-all placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-black/5 focus:outline-none"
           />
           <button
