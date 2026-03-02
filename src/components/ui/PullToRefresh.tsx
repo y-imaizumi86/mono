@@ -1,6 +1,6 @@
-import { animate, motion, useMotionValue, useTransform } from 'framer-motion';
-import { ArrowDown, Loader2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { animate, motion, useMotionValue, useTransform } from "framer-motion";
+import { ArrowDown, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 interface Props {
   onRefresh: () => Promise<void>;
@@ -8,7 +8,11 @@ interface Props {
   className?: string;
 }
 
-export const PullToRefresh = ({ onRefresh, children, className = '' }: Props) => {
+export const PullToRefresh = ({
+  onRefresh,
+  children,
+  className = "",
+}: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const y = useMotionValue(0);
@@ -23,7 +27,7 @@ export const PullToRefresh = ({ onRefresh, children, className = '' }: Props) =>
     const container = containerRef.current;
     if (!container) return;
 
-    const scrollParent = container.closest('.overflow-y-auto') || document.body;
+    const scrollParent = container.closest(".overflow-y-auto") || document.body;
 
     const handleTouchStart = (e: TouchEvent) => {
       if (scrollParent.scrollTop <= 0 && !loading) {
@@ -63,34 +67,38 @@ export const PullToRefresh = ({ onRefresh, children, className = '' }: Props) =>
       const currentY = y.get();
       if (currentY > 80) {
         setLoading(true);
-        await animate(y, 60, { type: 'spring', stiffness: 300, damping: 20 });
+        await animate(y, 60, { type: "spring", stiffness: 300, damping: 20 });
 
         try {
           await onRefresh();
         } finally {
           setLoading(false);
-          animate(y, 0, { type: 'spring', stiffness: 300, damping: 20 });
+          animate(y, 0, { type: "spring", stiffness: 300, damping: 20 });
         }
       } else {
-        animate(y, 0, { type: 'spring', stiffness: 300, damping: 20 });
+        animate(y, 0, { type: "spring", stiffness: 300, damping: 20 });
       }
     };
 
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener("touchstart", handleTouchStart, {
+      passive: true,
+    });
+    container.addEventListener("touchmove", handleTouchMove, {
+      passive: false,
+    });
+    container.addEventListener("touchend", handleTouchEnd, { passive: true });
 
     return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchmove", handleTouchMove);
+      container.removeEventListener("touchend", handleTouchEnd);
     };
   }, [loading, onRefresh, y]);
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       <motion.div
-        style={{ y, opacity, x: '-50%' }}
+        style={{ y, opacity, x: "-50%" }}
         className="absolute top-0 left-1/2 z-0 flex w-full -translate-y-full items-center justify-center pt-4"
       >
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md">

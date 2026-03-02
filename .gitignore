@@ -29,4 +29,6 @@ pnpm-debug.log*
 # Drizzle local sqlite file
 *.sqlite
 
-.antigravity/
+# AI
+GEMINI.md
+agent/

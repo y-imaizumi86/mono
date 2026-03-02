@@ -1,14 +1,14 @@
 // src/pages/api/items/index.ts
 
-import type { APIRoute } from 'astro';
-import { drizzle } from 'drizzle-orm/d1';
-import { items as ItemsTable, insertItemSchema } from '@/db/schema';
-import { eq, desc, or, asc } from 'drizzle-orm';
+import type { APIRoute } from "astro";
+import { drizzle } from "drizzle-orm/d1";
+import { items as ItemsTable, insertItemSchema } from "@/db/schema";
+import { eq, desc, or, asc } from "drizzle-orm";
 
 export const GET: APIRoute = async ({ locals }) => {
   const userEmail = locals.userEmail;
   if (!userEmail) {
-    return new Response('Unauthorized', { status: 401 });
+    return new Response("Unauthorized", { status: 401 });
   }
 
   const db = drizzle(locals.runtime.env.DB);
@@ -17,18 +17,23 @@ export const GET: APIRoute = async ({ locals }) => {
   const result = await db
     .select()
     .from(ItemsTable)
-    .where(or(eq(ItemsTable.listType, 'shared'), eq(ItemsTable.ownerEmail, userEmail)))
+    .where(
+      or(
+        eq(ItemsTable.listType, "shared"),
+        eq(ItemsTable.ownerEmail, userEmail),
+      ),
+    )
     .orderBy(asc(ItemsTable.order), desc(ItemsTable.createdAt));
 
   return new Response(JSON.stringify(result), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { "Content-Type": "application/json" },
   });
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const userEmail = locals.userEmail;
   if (!userEmail) {
-    return new Response('Unauthorized', { status: 401 });
+    return new Response("Unauthorized", { status: 401 });
   }
 
   const body = await request.json();

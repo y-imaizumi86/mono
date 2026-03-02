@@ -1,10 +1,10 @@
 // src/hooks/useRaisedShadow.ts
 
-import { animate, useMotionValue, type MotionValue } from 'framer-motion';
-import { useEffect } from 'react';
+import { animate, useMotionValue, type MotionValue } from "framer-motion";
+import { useEffect } from "react";
 
-const INACTIVE_SHADOW = '0px 0px 0px rgba(0,0,0,0.8)';
-const ACTIVE_SHADOW = '0px 10px 25px rgba(0,0,0,0.2)';
+const INACTIVE_SHADOW = "0px 0px 0px rgba(0,0,0,0.8)";
+const ACTIVE_SHADOW = "0px 10px 25px rgba(0,0,0,0.2)";
 
 export const useRaisedShadow = (value: MotionValue<number>) => {
   const boxShadow = useMotionValue(INACTIVE_SHADOW);

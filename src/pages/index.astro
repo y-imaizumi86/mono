@@ -1,8 +1,8 @@
 ---
 // src/pages/index.astro
 
-import { App } from '@/components/App';
-import Layout from '@/layouts/Layout.astro';
+import { App } from "@/components/App";
+import Layout from "@/layouts/Layout.astro";
 
 const userEmail = Astro.locals.userEmail;
 ---
@@ -18,7 +18,7 @@ const userEmail = Astro.locals.userEmail;
 
     {/* メイン: フルスクリーン, コンテンツは App コンポーネントで管理 */}
     <main class="absolute inset-0 z-0 h-full w-full">
-      <App client:load userEmail={userEmail || ''} />
+      <App client:load userEmail={userEmail || ""} />
     </main>
   </div>
 </Layout>

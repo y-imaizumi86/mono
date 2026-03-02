@@ -1,43 +1,50 @@
 // src/components/App.tsx
 
-import { useState, useMemo } from 'react';
-import { Reorder } from 'framer-motion';
-import { useItems } from '@/hooks/useItems';
-import { ShoppingItem } from './ui/ShoppingItem';
-import { PullToRefresh } from './ui/PullToRefresh';
-import { Plus } from 'lucide-react';
-import type { Item } from '@/db/schema';
-import { mutate } from 'swr';
+import { useState, useMemo } from "react";
+import { Reorder } from "framer-motion";
+import { useItems } from "@/hooks/useItems";
+import { ShoppingItem } from "./ui/ShoppingItem";
+import { PullToRefresh } from "./ui/PullToRefresh";
+import { Plus } from "lucide-react";
+import type { Item } from "@/db/schema";
+import { mutate } from "swr";
 
 interface Props {
   userEmail: string;
 }
 
 export const App = ({ userEmail }: Props) => {
-  const { items, isLoading, addItem, updateItem, deleteItem, reorderItems } = useItems();
-  const [activeTab, setActiveTab] = useState<'shared' | 'private'>('shared');
-  const [inputText, setInputText] = useState('');
+  const { items, isLoading, addItem, updateItem, deleteItem, reorderItems } =
+    useItems();
+  const [activeTab, setActiveTab] = useState<"shared" | "private">("shared");
+  const [inputText, setInputText] = useState("");
 
   const handleRefresh = async () => {
-    await mutate('/api/items');
+    await mutate("/api/items");
     await new Promise((resolve) => setTimeout(resolve, 500));
   };
 
   // shared と private でアイテムを分類
-  const sharedItems = useMemo(() => items.filter((item) => item.listType === 'shared'), [items]);
+  const sharedItems = useMemo(
+    () => items.filter((item) => item.listType === "shared"),
+    [items],
+  );
   const privateItems = useMemo(
-    () => items.filter((item) => item.listType === 'private' && item.ownerEmail === userEmail),
-    [items, userEmail]
+    () =>
+      items.filter(
+        (item) => item.listType === "private" && item.ownerEmail === userEmail,
+      ),
+    [items, userEmail],
   );
 
-  const filteredItems = activeTab === 'shared' ? sharedItems : privateItems;
+  const filteredItems = activeTab === "shared" ? sharedItems : privateItems;
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
 
     addItem(inputText, activeTab);
-    setInputText('');
+    setInputText("");
   };
 
   const handleReorder = (newFilteredOrder: Item[]) => {
@@ -45,7 +52,7 @@ export const App = ({ userEmail }: Props) => {
     const newOrderIds = new Set(newFilteredOrder.map((i) => i.id));
     const hiddenItems = currentAllItems.filter((i) => !newOrderIds.has(i.id));
     const mergedItems = [...newFilteredOrder, ...hiddenItems];
-    mutate('/api/items', mergedItems, false);
+    mutate("/api/items", mergedItems, false);
   };
 
   const handleOrderSave = () => {
@@ -66,17 +73,17 @@ export const App = ({ userEmail }: Props) => {
       <div className="flex-none px-4 pt-4 pb-2">
         <div className="flex gap-2 rounded-full bg-gray-100 p-1">
           <button
-            onClick={() => setActiveTab('shared')}
+            onClick={() => setActiveTab("shared")}
             className={`flex-1 rounded-full py-2 text-sm font-medium transition-all ${
-              activeTab === 'shared' ? 'bg-white shadow-sm' : 'text-gray-500'
+              activeTab === "shared" ? "bg-white shadow-sm" : "text-gray-500"
             }`}
           >
             みんな ({sharedItems.length})
           </button>
           <button
-            onClick={() => setActiveTab('private')}
+            onClick={() => setActiveTab("private")}
             className={`flex-1 rounded-full py-2 text-sm font-medium transition-all ${
-              activeTab === 'private' ? 'bg-white shadow-sm' : 'text-gray-500'
+              activeTab === "private" ? "bg-white shadow-sm" : "text-gray-500"
             }`}
           >
             自分だけ ({privateItems.length})
@@ -93,7 +100,12 @@ export const App = ({ userEmail }: Props) => {
               <p className="text-sm font-medium">リストは空です</p>
             </div>
           ) : (
-            <Reorder.Group axis="y" values={filteredItems} onReorder={handleReorder} layoutScroll>
+            <Reorder.Group
+              axis="y"
+              values={filteredItems}
+              onReorder={handleReorder}
+              layoutScroll
+            >
               {filteredItems.map((item) => (
                 <ShoppingItem
                   key={item.id}
@@ -118,7 +130,7 @@ export const App = ({ userEmail }: Props) => {
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder={`${activeTab === 'shared' ? 'みんな' : '自分だけ'}のリストに追加...`}
+            placeholder={`${activeTab === "shared" ? "みんな" : "自分だけ"}のリストに追加...`}
             className="flex-1 rounded-full bg-gray-100 px-5 py-3 text-gray-800 shadow-inner transition-all placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-black/5 focus:outline-none"
           />
           <button

@@ -1,11 +1,11 @@
 // src/components/ShoppingList.tsx
 
-import { useState, useEffect } from 'react';
-import { client } from '@/lib/client';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Trash2 } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { client } from "@/lib/client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Trash2 } from "lucide-react";
 
 // DBの型定義（一旦手動定義）
 type Item = {
@@ -16,7 +16,7 @@ type Item = {
 
 export const ShoppingList = () => {
   const [items, setItems] = useState<Item[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
 
   // 初回データ取得
@@ -45,17 +45,21 @@ export const ShoppingList = () => {
     if (res.ok) {
       const newItem = await res.json();
       setItems([newItem, ...items]); // リストの先頭に追加
-      setInputValue('');
+      setInputValue("");
     }
     setLoading(false);
   };
 
   const toggleItem = async (id: number, currentStatus: boolean) => {
     // UIを先に更新（楽観的更新もどき）して体感速度を上げる
-    setItems(items.map((i) => (i.id === id ? { ...i, isCompleted: !currentStatus } : i)));
+    setItems(
+      items.map((i) =>
+        i.id === id ? { ...i, isCompleted: !currentStatus } : i,
+      ),
+    );
 
     // APIコール
-    await client.api.items[':id'].$patch({
+    await client.api.items[":id"].$patch({
       param: { id: id.toString() },
       json: { isCompleted: !currentStatus },
     });
@@ -67,7 +71,7 @@ export const ShoppingList = () => {
     setItems(items.filter((i) => i.id !== id));
 
     // APIコール
-    await client.api.items[':id'].$delete({
+    await client.api.items[":id"].$delete({
       param: { id: id.toString() },
     });
   };
@@ -103,7 +107,7 @@ export const ShoppingList = () => {
               />
               <span
                 className={`font-mono transition-colors ${
-                  item.isCompleted ? 'text-muted-foreground line-through' : ''
+                  item.isCompleted ? "text-muted-foreground line-through" : ""
                 }`}
               >
                 {item.label}

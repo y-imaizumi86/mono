@@ -1,10 +1,16 @@
 // src/components/ui/ShoppingItem.tsx
 
-import { Reorder, animate, motion, useDragControls, useMotionValue } from 'framer-motion';
-import { GripVertical, Trash2, Lock, Unlock, Check } from 'lucide-react';
-import { useState } from 'react';
-import type { Item } from '@/db/schema';
-import { useRaisedShadow } from '@/hooks/useRaisedShadow';
+import {
+  Reorder,
+  animate,
+  motion,
+  useDragControls,
+  useMotionValue,
+} from "framer-motion";
+import { GripVertical, Trash2, Lock, Unlock, Check } from "lucide-react";
+import { useState } from "react";
+import type { Item } from "@/db/schema";
+import { useRaisedShadow } from "@/hooks/useRaisedShadow";
 
 interface Props {
   item: Item;
@@ -41,16 +47,20 @@ export const ShoppingItem = ({
     const velocity = info.velocity.x;
 
     if (offset < -50 || velocity < -500) {
-      await animate(x, -buttonWidth, { type: 'spring', bounce: 0, duration: 0.3 });
+      await animate(x, -buttonWidth, {
+        type: "spring",
+        bounce: 0,
+        duration: 0.3,
+      });
       setIsOpen(true);
     } else {
-      await animate(x, 0, { type: 'spring', bounce: 0, duration: 0.3 });
+      await animate(x, 0, { type: "spring", bounce: 0, duration: 0.3 });
       setIsOpen(false);
     }
   };
 
   const closeSwipe = () => {
-    animate(x, 0, { type: 'spring', bounce: 0, duration: 0.3 });
+    animate(x, 0, { type: "spring", bounce: 0, duration: 0.3 });
     setIsOpen(false);
   };
 
@@ -64,8 +74,8 @@ export const ShoppingItem = ({
         setIsReordering(false);
         onOrderChange();
       }}
-      transition={{ type: 'tween', duration: 0.15, ease: 'easeOut' }}
-      style={{ boxShadow, y, position: 'relative' }}
+      transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
+      style={{ boxShadow, y, position: "relative" }}
       className="mb-3 touch-pan-y rounded-xl select-none"
     >
       <div className="absolute inset-y-0 right-0 flex items-center pr-2">
@@ -73,12 +83,18 @@ export const ShoppingItem = ({
           {canChangeType && (
             <button
               onClick={() => {
-                onUpdate(item.id, { listType: item.listType === 'shared' ? 'private' : 'shared' });
+                onUpdate(item.id, {
+                  listType: item.listType === "shared" ? "private" : "shared",
+                });
                 closeSwipe();
               }}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-400 text-white shadow-sm transition-transform active:scale-90"
             >
-              {item.listType === 'shared' ? <Lock size={18} /> : <Unlock size={18} />}
+              {item.listType === "shared" ? (
+                <Lock size={18} />
+              ) : (
+                <Unlock size={18} />
+              )}
             </button>
           )}
           <button
@@ -91,7 +107,7 @@ export const ShoppingItem = ({
       </div>
 
       <motion.div
-        drag={isReordering ? false : 'x'}
+        drag={isReordering ? false : "x"}
         dragConstraints={{ left: -buttonWidth, right: 0 }}
         dragElastic={{ right: 0.05 }}
         onDragEnd={handleDragEnd}
@@ -116,8 +132,8 @@ export const ShoppingItem = ({
             }}
             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
               item.isCompleted
-                ? 'border-green-500 bg-green-500'
-                : 'border-gray-300 hover:border-green-400'
+                ? "border-green-500 bg-green-500"
+                : "border-gray-300 hover:border-green-400"
             }`}
           >
             {item.isCompleted && <Check size={14} className="text-white" />}
@@ -125,11 +141,11 @@ export const ShoppingItem = ({
 
           <div className="flex flex-col overflow-hidden">
             <span
-              className={`truncate font-medium transition-all ${item.isCompleted ? 'text-gray-400 line-through' : 'text-gray-800'}`}
+              className={`truncate font-medium transition-all ${item.isCompleted ? "text-gray-400 line-through" : "text-gray-800"}`}
             >
               {item.text}
             </span>
-            {item.listType === 'private' && (
+            {item.listType === "private" && (
               <span className="mt-0.5 flex items-center gap-1 text-[10px] text-gray-400">
                 <Lock size={10} /> 自分だけ
               </span>
@@ -139,7 +155,7 @@ export const ShoppingItem = ({
 
         <div
           className={`cursor-grab touch-none p-2 text-gray-300 transition-opacity duration-200 hover:text-gray-500 active:cursor-grabbing ${
-            isOpen ? 'pointer-events-none opacity-0' : 'opacity-100'
+            isOpen ? "pointer-events-none opacity-0" : "opacity-100"
           }`}
           onPointerDown={(e) => {
             if (isOpen) return;
