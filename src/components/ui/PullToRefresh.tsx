@@ -5,12 +5,14 @@ import { useEffect, useRef, useState } from "react";
 interface Props {
   onRefresh: () => Promise<void>;
   children: React.ReactNode;
+  disabled: boolean;
   className?: string;
 }
 
 export const PullToRefresh = ({
   onRefresh,
   children,
+  disabled,
   className = "",
 }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -30,6 +32,8 @@ export const PullToRefresh = ({
     const scrollParent = container.closest(".overflow-y-auto") || document.body;
 
     const handleTouchStart = (e: TouchEvent) => {
+      if (disabled) return;
+
       if (scrollParent.scrollTop <= 0 && !loading) {
         startY.current = e.touches[0].clientY;
       } else {
@@ -38,7 +42,7 @@ export const PullToRefresh = ({
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (loading) return;
+      if (disabled || loading) return;
 
       const currentY = e.touches[0].clientY;
       const diff = currentY - startY.current;
@@ -61,7 +65,7 @@ export const PullToRefresh = ({
     };
 
     const handleTouchEnd = async () => {
-      if (!isPulling.current || loading) return;
+      if (disabled || !isPulling.current || loading) return;
       isPulling.current = false;
 
       const currentY = y.get();
@@ -93,7 +97,7 @@ export const PullToRefresh = ({
       container.removeEventListener("touchmove", handleTouchMove);
       container.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [loading, onRefresh, y]);
+  }, [loading, onRefresh, y, disabled]);
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>

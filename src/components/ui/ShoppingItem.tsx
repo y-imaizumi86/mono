@@ -18,6 +18,7 @@ interface Props {
   onUpdate: (id: string, updates: Partial<Item>) => void;
   onDelete: (id: string) => void;
   onOrderChange: () => void;
+  onDragStartChange: (isDragging: boolean) => void;
 }
 
 export const ShoppingItem = ({
@@ -26,6 +27,7 @@ export const ShoppingItem = ({
   onUpdate,
   onDelete,
   onOrderChange,
+  onDragStartChange,
 }: Props) => {
   const dragControls = useDragControls();
 
@@ -40,7 +42,10 @@ export const ShoppingItem = ({
   const canChangeType = item.ownerEmail === currentUserEmail;
   const buttonWidth = canChangeType ? 120 : 60;
 
-  const handleDragEnd = async (_: any, info: any) => {
+  const handleDragEnd = async (
+    _: MouseEvent | TouchEvent | PointerEvent,
+    info: import("framer-motion").PanInfo,
+  ) => {
     if (isReordering) return;
 
     const offset = info.offset.x;
@@ -161,13 +166,20 @@ export const ShoppingItem = ({
             if (isOpen) return;
 
             setIsReordering(true);
+            onDragStartChange(true);
             dragControls.start(e);
           }}
           onPointerUp={() => {
-            setTimeout(() => setIsReordering(false), 50);
+            setTimeout(() => {
+              setIsReordering(false);
+              onDragStartChange(false);
+            }, 50);
           }}
           onPointerCancel={() => {
-            setTimeout(() => setIsReordering(false), 50);
+            setTimeout(() => {
+              setIsReordering(false);
+              onDragStartChange(false);
+            }, 50);
           }}
         >
           <GripVertical size={20} />

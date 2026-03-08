@@ -18,6 +18,7 @@ export const App = ({ userEmail }: Props) => {
     useItems();
   const [activeTab, setActiveTab] = useState<"shared" | "private">("shared");
   const [inputText, setInputText] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleRefresh = async () => {
     await mutate("/api/items");
@@ -93,7 +94,11 @@ export const App = ({ userEmail }: Props) => {
 
       {/* スクロール可能なコンテナ */}
       <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
-        <PullToRefresh onRefresh={handleRefresh} className="min-h-full">
+        <PullToRefresh
+          onRefresh={handleRefresh}
+          disabled={isDragging}
+          className="min-h-full"
+        >
           {filteredItems.length === 0 ? (
             <div className="flex h-60 flex-col items-center justify-center text-gray-400 opacity-50">
               <div className="mb-2 text-4xl">🛒</div>
@@ -114,6 +119,7 @@ export const App = ({ userEmail }: Props) => {
                   onUpdate={updateItem}
                   onDelete={deleteItem}
                   onOrderChange={handleOrderSave}
+                  onDragStartChange={setIsDragging}
                 />
               ))}
             </Reorder.Group>
